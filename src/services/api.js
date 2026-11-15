@@ -4,8 +4,21 @@ const api = axios.create({
   baseURL: 'http://localhost:3001'
 })
 
-export const buscarAlunos = async () => {
-  const resposta = await api.get('/alunos')
+// Promise.race: se a API demorar mais que o tempo, rejeita com timeout
+export const comTimeout = (promessa, tempo = 8000) => {
+  const timer = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('A requisição demorou demais (timeout)')), tempo)
+  })
+  return Promise.race([promessa, timer])
+}
+
+export const buscarAlunos = async (signal) => {
+  const resposta = await comTimeout(api.get('/alunos', { signal }))
+  return resposta.data
+}
+
+export const buscarAlunoPorId = async (id, signal) => {
+  const resposta = await comTimeout(api.get(`/alunos/${id}`, { signal }))
   return resposta.data
 }
 
@@ -20,18 +33,18 @@ export const criarAluno = async (aluno) => {
     ativo,
     dataMatricula: new Date().toISOString().slice(0, 10)
   }
-  const resposta = await api.post('/alunos', novoAluno)
+  const resposta = await comTimeout(api.post('/alunos', novoAluno))
   return resposta.data
 }
 
 export const atualizarAluno = async (id, dados) => {
   const { id: _ignorar, ...resto } = dados
-  const resposta = await api.put(`/alunos/${id}`, { ...resto })
+  const resposta = await comTimeout(api.put(`/alunos/${id}`, { ...resto }))
   return resposta.data
 }
 
 export const deletarAluno = async (id) => {
-  await api.delete(`/alunos/${id}`)
+  await comTimeout(api.delete(`/alunos/${id}`))
   return id
 }
 

@@ -10,16 +10,24 @@ export const AlunosProvider = ({ children }) => {
   const [mensagem, setMensagem] = useState(null)
 
   useEffect(() => {
-    buscarAlunos()
+    const controller = new AbortController()
+
+    buscarAlunos(controller.signal)
       .then((dados) => {
         setAlunos(dados)
         setErro(null)
       })
       .catch((e) => {
+        if (e.name === 'CanceledError' || e.name === 'AbortError') {
+          console.log('requisição cancelada')
+          return
+        }
         console.log(e)
         setErro('Não foi possível carregar os alunos. O json-server está rodando?')
       })
       .finally(() => setCarregando(false))
+
+    return () => controller.abort()
   }, [])
 
   const mostrarMensagem = (tipo, texto) => {

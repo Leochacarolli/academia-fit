@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import useForm from '../hooks/useForm'
 import { validarAluno, planos } from '../utils/validacao'
+import { buscarCep } from '../services/cepService'
 import Botao from './Botao'
 
 const valoresPadrao = {
@@ -17,6 +18,8 @@ const AlunoForm = ({ alunoInicial, onSalvar, textoBotao = 'Salvar' }) => {
     alunoInicial || valoresPadrao,
     validarAluno
   )
+  const [endereco, setEndereco] = useState(null)
+  const [erroCep, setErroCep] = useState('')
   const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
@@ -25,10 +28,35 @@ const AlunoForm = ({ alunoInicial, onSalvar, textoBotao = 'Salvar' }) => {
     }
   }, [alunoInicial])
 
+  useEffect(() => {
+    const cepLimpo = valores.cep.replace(/\D/g, '')
+    if (cepLimpo.length !== 8) {
+      setEndereco(null)
+      setErroCep('')
+      return
+    }
+
+    const controller = new AbortController()
+
+    buscarCep(cepLimpo, controller.signal)
+      .then((dados) => {
+        setEndereco(dados)
+        setErroCep('')
+      })
+      .catch((e) => {
+        if (e.name === 'AbortError') return
+        setEndereco(null)
+        setErroCep(e.message)
+      })
+
+    return () => controller.abort()
+  }, [valores.cep])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (!validarFormulario()) {
+      console.log('formulario com erro', erros)
       return
     }
 
@@ -75,9 +103,15 @@ const AlunoForm = ({ alunoInicial, onSalvar, textoBotao = 'Salvar' }) => {
           <label htmlFor="cep">CEP</label>
           <input id="cep" name="cep" value={valores.cep} onChange={handleChange} placeholder="00000000" maxLength={9} />
           {erros.cep && <span className="erro-campo">{erros.cep}</span>}
+          {erroCep && <span className="erro-campo">{erroCep}</span>}
         </div>
       </div>
 
+      {endereco && (
+        <p className="endereco-encontrado">
+          📍 {endereco.logradouro}, {endereco.bairro} - {endereco.localidade}/{endereco.uf}
+        </p>
+      )}
 
       <label className="checkbox">
         <input type="checkbox" name="ativo" checked={valores.ativo} onChange={handleChange} />
