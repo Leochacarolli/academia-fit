@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import useForm from '../hooks/useForm'
 import { validarAluno, planos } from '../utils/validacao'
 import Botao from './Botao'
 
@@ -12,24 +13,28 @@ const valoresPadrao = {
 }
 
 const AlunoForm = ({ alunoInicial, onSalvar, textoBotao = 'Salvar' }) => {
-  const [valores, setValores] = useState(alunoInicial || valoresPadrao)
-  const [erros, setErros] = useState({})
+  const { valores, setValores, erros, handleChange, validarFormulario } = useForm(
+    alunoInicial || valoresPadrao,
+    validarAluno
+  )
+  const [salvando, setSalvando] = useState(false)
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setValores({ ...valores, [name]: type === 'checkbox' ? checked : value })
-  }
+  useEffect(() => {
+    if (alunoInicial) {
+      setValores(alunoInicial)
+    }
+  }, [alunoInicial])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const errosEncontrados = validarAluno(valores)
-    setErros(errosEncontrados)
 
-    if (Object.keys(errosEncontrados).length > 0) {
+    if (!validarFormulario()) {
       return
     }
 
-    onSalvar({ ...valores, cep: valores.cep.replace(/\D/g, '') })
+    setSalvando(true)
+    await onSalvar({ ...valores, cep: valores.cep.replace(/\D/g, '') })
+    setSalvando(false)
   }
 
   return (
@@ -79,7 +84,9 @@ const AlunoForm = ({ alunoInicial, onSalvar, textoBotao = 'Salvar' }) => {
         Aluno ativo
       </label>
 
-      <Botao type="submit">{textoBotao}</Botao>
+      <Botao type="submit" disabled={salvando}>
+        {salvando ? 'Salvando...' : textoBotao}
+      </Botao>
     </form>
   )
 }
