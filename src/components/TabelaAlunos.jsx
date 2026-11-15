@@ -1,9 +1,10 @@
+import { Link } from 'react-router-dom'
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip
 } from '@mui/material'
 import Botao from './Botao'
 
-const TabelaAlunos = ({ alunos, onEditar, onExcluir }) => {
+const TabelaAlunos = ({ alunos, onExcluir }) => {
   if (alunos.length === 0) {
     return <p className="vazio">Nenhum aluno encontrado 😕</p>
   }
@@ -25,7 +26,7 @@ const TabelaAlunos = ({ alunos, onEditar, onExcluir }) => {
           {alunos.map((aluno) => (
             <TableRow key={aluno.id} hover>
               <TableCell>
-                <b>{aluno.nome}</b>
+                <Link to={`/alunos/${aluno.id}`} className="link-nome">{aluno.nome}</Link>
               </TableCell>
               <TableCell>{aluno.email}</TableCell>
               <TableCell>{aluno.telefone}</TableCell>
@@ -39,9 +40,12 @@ const TabelaAlunos = ({ alunos, onEditar, onExcluir }) => {
               </TableCell>
               <TableCell align="center">
                 <div className="acoes">
-                  <Botao variante="aviso" onClick={() => onEditar(aluno)}>
-                    Editar
-                  </Botao>
+                  <Link to={`/alunos/${aluno.id}`}>
+                    <Botao variante="secundario">Ver</Botao>
+                  </Link>
+                  <Link to={`/alunos/${aluno.id}/editar`}>
+                    <Botao variante="aviso">Editar</Botao>
+                  </Link>
                   <Botao variante="perigo" onClick={() => onExcluir(aluno)}>
                     Excluir
                   </Botao>
