@@ -1,48 +1,37 @@
-import { useEffect, useState } from 'react'
-import { buscarAlunos, criarAluno, atualizarAluno, deletarAluno } from './services/api'
+import { useState } from 'react'
+import { useAlunos } from './context/AlunosContext'
 import AlunoForm from './components/AlunoForm'
 import TabelaAlunos from './components/TabelaAlunos'
 import Botao from './components/Botao'
+import Mensagem from './components/Mensagem'
 
 function App() {
-  const [alunos, setAlunos] = useState([])
+  const { alunos, carregando, erro, mensagem, adicionar, editar, remover } = useAlunos()
   const [alunoEditando, setAlunoEditando] = useState(null)
   const [formKey, setFormKey] = useState(0)
+  const [busca, setBusca] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState('todos')
 
-  useEffect(() => {
-    buscarAlunos()
-      .then((dados) => setAlunos(dados))
-      .catch((e) => console.log(e))
-  }, [])
+  const alunosFiltrados = alunos
+    .filter((a) => a.nome.toLowerCase().includes(busca.toLowerCase()))
+    .filter((a) => {
+      if (filtroStatus === 'ativos') return a.ativo
+      if (filtroStatus === 'inativos') return !a.ativo
+      return true
+    })
 
   const salvar = async (dados) => {
-    try {
-      if (alunoEditando) {
-        const atualizado = await atualizarAluno(alunoEditando.id, dados)
-        setAlunos(alunos.map((a) => (a.id === atualizado.id ? atualizado : a)))
-      } else {
-        const novo = await criarAluno(dados)
-        setAlunos([...alunos, novo])
-      }
+    const deuCerto = alunoEditando
+      ? await editar(alunoEditando.id, dados)
+      : await adicionar(dados)
+
+    if (deuCerto) {
       setAlunoEditando(null)
       setFormKey(formKey + 1)
-    } catch (e) {
-      alert(`Erro ao salvar: ${e.message}`)
     }
   }
 
-  const excluir = async (aluno) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o aluno "${aluno.nome}"?`)) return
-
-    try {
-      await deletarAluno(aluno.id)
-      setAlunos(alunos.filter((a) => a.id !== aluno.id))
-    } catch (e) {
-      alert(`Erro ao excluir: ${e.message}`)
-    }
-  }
-
-  const editar = (aluno) => {
+  const selecionarParaEditar = (aluno) => {
     setAlunoEditando(aluno)
     setFormKey(formKey + 1)
   }
@@ -59,6 +48,8 @@ function App() {
       </nav>
 
       <main className="pagina">
+        {mensagem && <Mensagem tipo={mensagem.tipo} texto={mensagem.texto} />}
+
         <h2>{alunoEditando ? `Editando: ${alunoEditando.nome}` : 'Cadastrar aluno'}</h2>
         <AlunoForm
           key={formKey}
@@ -71,7 +62,28 @@ function App() {
         )}
 
         <h2 className="titulo-lista">Alunos</h2>
-        <TabelaAlunos alunos={alunos} onEditar={editar} onExcluir={excluir} />
+
+        <div className="filtros">
+          <input
+            placeholder="🔎 Buscar por nome..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+          <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+            <option value="todos">Todos</option>
+            <option value="ativos">Ativos</option>
+            <option value="inativos">Inativos</option>
+          </select>
+        </div>
+
+        {carregando && <p>Carregando alunos...</p>}
+        {erro && <Mensagem tipo="erro" texto={erro} />}
+        {!carregando && !erro && (
+          <>
+            <p className="contador">Mostrando {alunosFiltrados.length} de {alunos.length} alunos</p>
+            <TabelaAlunos alunos={alunosFiltrados} onEditar={selecionarParaEditar} onExcluir={remover} />
+          </>
+        )}
       </main>
     </>
   )
